@@ -56,9 +56,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         uint256 ethAmount
     );
     event LogBuyBTCNFT(
+        uint256 indexed orderNumber,
         address indexed buyer,
         string indexed inscriptionID,
-        uint256 indexed btcNFTId,
+        uint256 btcNFTId,
         string nft_owner,
         string nft_receiver,
         address token,
@@ -163,9 +164,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         });
         offerState[btcNFTId] = OSTATE.CREATED;
 
-        orderNumber += 1;
-
         emit LogBuyBTCNFT(
+            orderNumber,
             msg.sender,
             inscriptionID,
             btcNFTId,
@@ -175,6 +175,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             ethAmount,
             seller
         );
+
+        orderNumber += 1;
     }
 
     function buyBTCNFT(
@@ -214,9 +216,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         });
         offerState[btcNFTId] = OSTATE.CREATED;
 
-        orderNumber += 1;
-
         emit LogBuyBTCNFT(
+            orderNumber,
             msg.sender,
             inscriptionID,
             btcNFTId,
@@ -226,6 +227,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             amount,
             seller
         );
+
+        orderNumber += 1;
     }
 
     function offerCheck(uint256 _orderNumber, OSTATE _state)
