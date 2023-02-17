@@ -2,10 +2,10 @@
 pragma solidity 0.8.4;
 
 import "./IERC20.sol";
-import "./Ownable2Step.sol";
-import "./Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-contract OrdinalBTCMarket is Ownable2Step, Pausable {
+contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     enum OSTATE {
         NOT_STARTED,
         CREATED,
@@ -68,11 +68,11 @@ contract OrdinalBTCMarket is Ownable2Step, Pausable {
     event LogOfferCheck(uint256 indexed orderNumber, OSTATE indexed state);
     event LogWithdraw(address indexed seller, uint256 indexed orderNumber);
 
-    constructor(
+    function initialize(
         address _USDT,
         address _oBTC,
         address _admin
-    ) {
+    ) public initializer {
         acceptedTokenList[ETH] = true;
         acceptedTokenList[_USDT] = true;
         acceptedTokenList[_oBTC] = true;
