@@ -45,7 +45,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     mapping(uint256 => OfferInfo) public offerInfo; // offerNumber => offerInfo
     mapping(uint256 => OSTATE) public offerState; // btcNFTId => offerState
 
-    uint256 public orderNumber = 0; // next order number, current total numbers of order
+    uint256 public orderNumber = 0; // latest order number, current total numbers of order
+    uint256 public checkedOrderNumber = 0; // latest checked order number, current total numbers of checked order
 
     event LogUpdateBuyFeeList(address indexed token, uint256 indexed buyFee);
     event LogUpdateSellFeeList(address indexed token, uint256 indexed sellFee);
@@ -172,7 +173,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         );
         pendingFees[ETH] += buyFeeAmount;
 
+        orderNumber += 1;
+
         buyerHistory[msg.sender][ETH] += ethAmount;
+
         offerInfo[orderNumber] = OfferInfo({
             buyer: msg.sender,
             inscriptionID: inscriptionID,
@@ -186,6 +190,11 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         });
         offerState[btcNFTId] = OSTATE.CREATED;
 
+        uint256 remainETH = msg.value - (ethAmount + buyFeeAmount);
+        if (remainETH > 0) {
+            payable(msg.sender).transfer(remainETH);
+        }
+
         emit LogBuyBTCNFT(
             orderNumber,
             msg.sender,
@@ -197,8 +206,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             ethAmount,
             seller
         );
-
-        orderNumber += 1;
     }
 
     function buyBTCNFT(
@@ -224,7 +231,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         );
         pendingFees[address(token)] += buyFeeAmount;
 
+        orderNumber += 1;
+
         buyerHistory[msg.sender][address(token)] += amount;
+
         offerInfo[orderNumber] = OfferInfo({
             buyer: msg.sender,
             inscriptionID: inscriptionID,
@@ -249,8 +259,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             amount,
             seller
         );
-
-        orderNumber += 1;
     }
 
     function offerCheck(uint256 _orderNumber, OSTATE _state)
@@ -258,10 +266,20 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         whenNotPaused
         onlyAdmins
     {
+        require(_orderNumber > 0, "INVLALID_ORDER_NUMBER");
+
         require(
             (_state == OSTATE.ALLOWED) || (_state == OSTATE.CANCELED),
             "UNKNOWN_STATE"
         );
+
+        // Should be check previous order first
+        if (_orderNumber > 1) {
+            bool cond = (offerInfo[_orderNumber - 1].state == OSTATE.ALLOWED) ||
+                (offerInfo[_orderNumber - 1].state == OSTATE.CANCELED) ||
+                (offerInfo[_orderNumber - 1].state == OSTATE.COMPLETED);
+            require(cond, "PREVIOUS_OFFER_WAS_NOT_CHECK_YET");
+        }
 
         uint256 btcNFTId = offerInfo[_orderNumber].btcNFTId;
 
@@ -273,6 +291,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
         offerInfo[_orderNumber].state = _state;
         offerState[btcNFTId] = _state;
+
+        checkedOrderNumber = _orderNumber;
 
         emit LogOfferCheck(_orderNumber, _state);
     }
