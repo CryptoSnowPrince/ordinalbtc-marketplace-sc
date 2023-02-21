@@ -78,3 +78,14 @@ ProxyAdmin
 TransparentUpgradeableProxy(Proxy)
 0x0768657262b4706236a7FFf7E213Cf9461f3cdf3
 ```
+
+```
+Implement- OrdinalMarket
+0x4c29C054D76997B96ecBc8823B2251A5D623c499
+
+ProxyAdmin
+0xb6E4CFf107B54795d7Aa29695a3880E622F91D58
+
+TransparentUpgradeableProxy(Proxy)
+0x66DC7B56dC8C452b7981b6D80C8033981292e9E6
+```
