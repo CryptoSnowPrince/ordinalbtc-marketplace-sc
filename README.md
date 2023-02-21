@@ -38,3 +38,9 @@ ProxyAdmin
 
 TransparentUpgradeableProxy(Proxy)
 0xC8ab3763b3b19DaEbDB96bC3714cE2428BC7cb1D
+
+ETH, USDT, ...: 
+buy: 2.5% sell: 2.5%
+
+oBTC:
+buySell: 1%

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
@@ -31,11 +31,13 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     // 10000: 100%, 100: 1%
     uint256 public constant FEE_DENOMINATOR = 10000;
     uint256 public constant MAX_FEE = 3000;
-    uint256 public BUY_FEE = 100;
-    uint256 public SELL_FEE = 100;
 
+    mapping(address => uint256) public buyFeeList;
+    mapping(address => uint256) public sellFeeList;
     mapping(address => bool) public acceptedTokenList;
     mapping(address => bool) public adminList;
+
+    mapping(address => uint256) public pendingFees;
 
     mapping(address => mapping(address => uint256)) public buyerHistory; // buyer -> token -> amount
     mapping(address => mapping(address => uint256)) public sellerHistory; // seller -> token -> amount
@@ -45,8 +47,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
     uint256 public orderNumber = 0; // next order number, current total numbers of order
 
-    event LogSetBuyFee(uint256 indexed BUY_FEE);
-    event LogSetSellFee(uint256 indexed SELL_FEE);
+    event LogUpdateBuyFeeList(address indexed token, uint256 indexed buyFee);
+    event LogUpdateSellFeeList(address indexed token, uint256 indexed sellFee);
     event LogUpdateAcceptedTokenList(address indexed token, bool indexed state);
     event LogUpdateAdminList(address indexed admin, bool indexed state);
     event LogWithdrawFee(
@@ -58,8 +60,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     event LogBuyBTCNFT(
         uint256 indexed orderNumber,
         address indexed buyer,
-        string indexed inscriptionID,
-        uint256 btcNFTId,
+        uint256 indexed btcNFTId,
+        string inscriptionID,
         string nft_owner,
         string nft_receiver,
         address token,
@@ -71,12 +73,25 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
     function initialize(
         address _USDT,
+        address _USDC,
         address _oBTC,
         address _admin
     ) public initializer {
         acceptedTokenList[ETH] = true;
         acceptedTokenList[_USDT] = true;
+        acceptedTokenList[_USDC] = true;
         acceptedTokenList[_oBTC] = true;
+
+        buyFeeList[ETH] = 250;
+        buyFeeList[_USDT] = 250;
+        buyFeeList[_USDC] = 250;
+        buyFeeList[_oBTC] = 100;
+
+        sellFeeList[ETH] = 250;
+        sellFeeList[_USDT] = 250;
+        sellFeeList[_USDC] = 250;
+        sellFeeList[_oBTC] = 100;
+
         adminList[msg.sender] = true;
         adminList[_admin] = true;
     }
@@ -84,6 +99,26 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     modifier onlyAdmins() {
         require(adminList[msg.sender] == true, "NOT_ADMIN");
         _;
+    }
+
+    function updateBuyFeeList(address token, uint256 _buyFee)
+        external
+        onlyOwner
+    {
+        require(_buyFee < MAX_FEE, "OVER_MAX_FEE");
+        require(buyFeeList[token] != _buyFee, "SAME_FEE");
+        buyFeeList[token] = _buyFee;
+        emit LogUpdateBuyFeeList(token, _buyFee);
+    }
+
+    function updateSellFeeList(address token, uint256 _sellFee)
+        external
+        onlyOwner
+    {
+        require(_sellFee < MAX_FEE, "OVER_MAX_FEE");
+        require(sellFeeList[token] != _sellFee, "SAME_FEE");
+        sellFeeList[token] = _sellFee;
+        emit LogUpdateSellFeeList(token, _sellFee);
     }
 
     function updateAcceptedTokenList(address token, bool state)
@@ -109,20 +144,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         _unpause();
     }
 
-    function setBuyFee(uint256 _buyFee) external onlyOwner {
-        require(_buyFee < MAX_FEE, "OVER_MAX_FEE");
-
-        BUY_FEE = _buyFee;
-        emit LogSetBuyFee(BUY_FEE);
-    }
-
-    function setSellFee(uint256 _sellFee) external onlyOwner {
-        require(_sellFee < MAX_FEE, "OVER_MAX_FEE");
-
-        SELL_FEE = _sellFee;
-        emit LogSetSellFee(SELL_FEE);
-    }
-
     function enableCreateOffer(uint256 btcNFTId) private view returns (bool) {
         if (
             offerState[btcNFTId] == OSTATE.NOT_STARTED ||
@@ -144,11 +165,12 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[ETH], "NON_ACCEPTABLE_TOKEN");
         require(enableCreateOffer(btcNFTId), "DISABLE_CREATE_OFFER");
-        uint256 buyFeeAmount = (ethAmount * BUY_FEE) / FEE_DENOMINATOR;
+        uint256 buyFeeAmount = (ethAmount * buyFeeList[ETH]) / FEE_DENOMINATOR;
         require(
             msg.value >= (ethAmount + buyFeeAmount),
             "INSUFFICIENT_ETH_AMOUNT"
         );
+        pendingFees[ETH] += buyFeeAmount;
 
         buyerHistory[msg.sender][ETH] += ethAmount;
         offerInfo[orderNumber] = OfferInfo({
@@ -167,8 +189,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         emit LogBuyBTCNFT(
             orderNumber,
             msg.sender,
-            inscriptionID,
             btcNFTId,
+            inscriptionID,
             nft_owner,
             nft_receiver,
             ETH,
@@ -192,15 +214,15 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[address(token)], "NON_ACCEPTABLE_TOKEN");
         require(enableCreateOffer(btcNFTId), "DISABLE_CREATE_OFFER");
-        uint256 buyFeeAmount = (amount * BUY_FEE) / FEE_DENOMINATOR;
-        require(
-            token.transferFrom(
-                msg.sender,
-                address(this),
-                amount + buyFeeAmount
-            ),
-            "INSUFFICIENT_TOKEN_AMOUNT"
+        uint256 buyFeeAmount = (amount * buyFeeList[address(token)]) /
+            FEE_DENOMINATOR;
+        SafeERC20.safeTransferFrom(
+            token,
+            msg.sender,
+            address(this),
+            amount + buyFeeAmount
         );
+        pendingFees[address(token)] += buyFeeAmount;
 
         buyerHistory[msg.sender][address(token)] += amount;
         offerInfo[orderNumber] = OfferInfo({
@@ -219,8 +241,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         emit LogBuyBTCNFT(
             orderNumber,
             msg.sender,
-            inscriptionID,
             btcNFTId,
+            inscriptionID,
             nft_owner,
             nft_receiver,
             address(token),
@@ -266,14 +288,16 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
         address token = offerInfo[_orderNumber].token;
         uint256 amount = offerInfo[_orderNumber].amount;
-        uint256 sellFeeAmount = (amount * SELL_FEE) / FEE_DENOMINATOR;
+        uint256 sellFeeAmount = (amount * sellFeeList[token]) / FEE_DENOMINATOR;
+        pendingFees[token] += sellFeeAmount;
 
         if (token == ETH) {
             payable(msg.sender).transfer(amount - sellFeeAmount);
         } else {
-            require(
-                IERC20(token).transfer(msg.sender, amount - sellFeeAmount),
-                "TRANSFER_FAILED"
+            SafeERC20.safeTransfer(
+                IERC20(token),
+                msg.sender,
+                amount - sellFeeAmount
             );
         }
 
@@ -290,12 +314,13 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         uint256 amount,
         uint256 ethAmount
     ) external onlyOwner {
-        uint256 tokenBalance = token.balanceOf(address(this));
-        if (amount <= tokenBalance) {
-            token.transfer(msg.sender, amount);
+        if (amount <= pendingFees[address(token)]) {
+            pendingFees[address(token)] -= amount;
+            SafeERC20.safeTransfer(IERC20(token), msg.sender, amount);
         }
 
-        if (ethAmount <= address(this).balance) {
+        if (ethAmount <= pendingFees[ETH]) {
+            pendingFees[ETH] -= ethAmount;
             payable(msg.sender).transfer(ethAmount);
         }
 
