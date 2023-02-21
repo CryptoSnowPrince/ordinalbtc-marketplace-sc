@@ -48,6 +48,9 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     uint256 public orderNumber = 0; // latest order number, current total numbers of order
     uint256 public checkedOrderNumber = 0; // latest checked order number, current total numbers of checked order
 
+    uint256 public withdrawNumber = 0;
+    mapping(uint256 => uint256) public withdrawHistory; // withdrawNumber => OrderNumber
+
     event LogUpdateBuyFeeList(address indexed token, uint256 indexed buyFee);
     event LogUpdateSellFeeList(address indexed token, uint256 indexed sellFee);
     event LogUpdateAcceptedTokenList(address indexed token, bool indexed state);
@@ -325,6 +328,9 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
         offerInfo[_orderNumber].state = OSTATE.COMPLETED;
         offerState[btcNFTId] = OSTATE.COMPLETED;
+
+        withdrawNumber += 1;
+        withdrawHistory[withdrawNumber] = _orderNumber;
 
         emit LogWithdraw(msg.sender, _orderNumber);
     }
