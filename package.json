@@ -1,4 +1,5 @@
 {
+  "name": "ordinalbtc-marketplace-sc",
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.8.1",
