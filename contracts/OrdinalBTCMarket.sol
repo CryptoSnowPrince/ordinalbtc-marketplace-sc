@@ -11,8 +11,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         CREATED,
         ALLOWED,
         CANCELED,
-        COMPLETED,
-        OTHER
+        COMPLETED
     }
 
     struct OfferInfo {
@@ -148,15 +147,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         _unpause();
     }
 
-    function enableCreateOffer(uint256 btcNFTId) private view returns (bool) {
-        if (
-            offerState[btcNFTId] == OSTATE.NOT_STARTED ||
-            offerState[btcNFTId] == OSTATE.CANCELED ||
-            offerState[btcNFTId] == OSTATE.COMPLETED
-        ) return true;
-        return false;
-    }
-
     function buyBTCNFTwithETH(
         string calldata inscriptionID,
         uint256 btcNFTId,
@@ -168,7 +158,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     ) external payable whenNotPaused {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[ETH], "NON_ACCEPTABLE_TOKEN");
-        require(enableCreateOffer(btcNFTId), "DISABLE_CREATE_OFFER");
+        require(offerState[btcNFTId] != OSTATE.CREATED, "DISABLE_CREATE_OFFER");
         uint256 buyFeeAmount = (ethAmount * buyFeeList[ETH]) / FEE_DENOMINATOR;
         require(
             msg.value >= (ethAmount + buyFeeAmount),
@@ -223,7 +213,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     ) external whenNotPaused {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[address(token)], "NON_ACCEPTABLE_TOKEN");
-        require(enableCreateOffer(btcNFTId), "DISABLE_CREATE_OFFER");
+        require(offerState[btcNFTId] != OSTATE.CREATED, "DISABLE_CREATE_OFFER");
         uint256 buyFeeAmount = (amount * buyFeeList[address(token)]) /
             FEE_DENOMINATOR;
         SafeERC20.safeTransferFrom(
