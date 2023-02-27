@@ -101,6 +101,11 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         sellFeeList[_USDC] = 250;
         sellFeeList[_oBTC] = 100;
 
+        minFeeAmountList[ETH] = 0.005 ether; // decimals = 18, 0.005 ETH
+        minFeeAmountList[_USDT] = 5_000_000; // decimals = 6, 5 USDT
+        minFeeAmountList[_USDC] = 5_000_000; // decimals = 6, 5 USDC
+        minFeeAmountList[_oBTC] = 100 ether; // decimals = 18, 100 oBTC
+
         adminList[msg.sender] = true;
         adminList[_admin] = true;
     }
