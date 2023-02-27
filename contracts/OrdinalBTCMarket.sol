@@ -385,8 +385,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             SafeERC20.safeTransfer(IERC20(token), buyer, _amount);
         }
 
-        withdrawNumber += 1;
-        withdrawHistory[withdrawNumber] = _orderNumber;
         emit LogWithdrawCancelOrder(_orderNumber);
     }
 
