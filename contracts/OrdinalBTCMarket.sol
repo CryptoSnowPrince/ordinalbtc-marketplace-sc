@@ -72,7 +72,8 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         address seller
     );
     event LogOfferCheck(uint256 indexed orderNumber, OSTATE indexed state);
-    event LogWithdraw(address indexed seller, uint256 indexed orderNumber);
+    event LogWithdrawOrder(uint256 indexed orderNumber);
+    event LogWithdrawCancelOrder(uint256 indexed orderNumber);
 
     function initialize(
         address _USDT,
@@ -259,8 +260,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         whenNotPaused
         onlyAdmins
     {
-        require(_orderNumber > 0, "INVLALID_ORDER_NUMBER");
-
         require(
             (_state == OSTATE.ALLOWED) || (_state == OSTATE.CANCELED),
             "UNKNOWN_STATE"
@@ -290,7 +289,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         emit LogOfferCheck(_orderNumber, _state);
     }
 
-    function withdraw(uint256 _orderNumber) external whenNotPaused {
+    function withdrawOrder(uint256 _orderNumber) external whenNotPaused {
         require(offerInfo[_orderNumber].seller == msg.sender, "NOT_SELLER");
         uint256 btcNFTId = offerInfo[_orderNumber].btcNFTId;
         require(
@@ -322,7 +321,36 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         withdrawNumber += 1;
         withdrawHistory[withdrawNumber] = _orderNumber;
 
-        emit LogWithdraw(msg.sender, _orderNumber);
+        emit LogWithdrawOrder(_orderNumber);
+    }
+
+    function withdrawCancelOrder(uint256 _orderNumber, uint256 _amount)
+        external
+        onlyOwner
+    {
+        uint256 btcNFTId = offerInfo[_orderNumber].btcNFTId;
+        require(
+            (offerState[btcNFTId] == OSTATE.CANCELED) &&
+                (offerInfo[_orderNumber].state == OSTATE.CANCELED),
+            "NOT_CANCELED"
+        );
+
+        require(_amount <= offerInfo[_orderNumber].amount, "OVERFLOW_AMOUNT");
+
+        address token = offerInfo[_orderNumber].token;
+        address buyer = offerInfo[_orderNumber].buyer;
+
+        buyerHistory[msg.sender][token] -= offerInfo[_orderNumber].amount;
+
+        if (token == ETH) {
+            payable(buyer).transfer(_amount);
+        } else {
+            SafeERC20.safeTransfer(IERC20(token), buyer, _amount);
+        }
+
+        withdrawNumber += 1;
+        withdrawHistory[withdrawNumber] = _orderNumber;
+        emit LogWithdrawCancelOrder(_orderNumber);
     }
 
     function withdrawFee(
