@@ -31,6 +31,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     uint256 public constant FEE_DENOMINATOR = 10000;
     uint256 public constant MAX_FEE = 3000;
 
+    mapping(address => uint256) public minFeeAmountList;
     mapping(address => uint256) public buyFeeList;
     mapping(address => uint256) public sellFeeList;
     mapping(address => bool) public acceptedTokenList;
@@ -50,6 +51,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     uint256 public withdrawNumber = 0;
     mapping(uint256 => uint256) public withdrawHistory; // withdrawNumber => OrderNumber
 
+    event LogUpdateMinFeeAmountList(
+        address indexed token,
+        uint256 indexed minFeeAmount
+    );
     event LogUpdateBuyFeeList(address indexed token, uint256 indexed buyFee);
     event LogUpdateSellFeeList(address indexed token, uint256 indexed sellFee);
     event LogUpdateAcceptedTokenList(address indexed token, bool indexed state);
@@ -103,6 +108,15 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
     modifier onlyAdmins() {
         require(adminList[msg.sender] == true, "NOT_ADMIN");
         _;
+    }
+
+    function updateMinFeeAmountList(address token, uint256 _minFeeAmount)
+        external
+        onlyOwner
+    {
+        require(minFeeAmountList[token] != _minFeeAmount, "SAME_MIN_FEE");
+        minFeeAmountList[token] = _minFeeAmount;
+        emit LogUpdateMinFeeAmountList(token, _minFeeAmount);
     }
 
     function updateBuyFeeList(address token, uint256 _buyFee)
@@ -160,7 +174,14 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[ETH], "NON_ACCEPTABLE_TOKEN");
         require(offerState[btcNFTId] != OSTATE.CREATED, "DISABLE_CREATE_OFFER");
+
         uint256 buyFeeAmount = (ethAmount * buyFeeList[ETH]) / FEE_DENOMINATOR;
+
+        // fee check
+        if (buyFeeAmount < minFeeAmountList[ETH]) {
+            buyFeeAmount = minFeeAmountList[ETH];
+        }
+
         require(
             msg.value >= (ethAmount + buyFeeAmount),
             "INSUFFICIENT_ETH_AMOUNT"
@@ -215,8 +236,15 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(acceptedTokenList[address(token)], "NON_ACCEPTABLE_TOKEN");
         require(offerState[btcNFTId] != OSTATE.CREATED, "DISABLE_CREATE_OFFER");
+
         uint256 buyFeeAmount = (amount * buyFeeList[address(token)]) /
             FEE_DENOMINATOR;
+
+        // fee check
+        if (buyFeeAmount < minFeeAmountList[address(token)]) {
+            buyFeeAmount = minFeeAmountList[address(token)];
+        }
+
         SafeERC20.safeTransferFrom(
             token,
             msg.sender,
@@ -301,6 +329,15 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         address token = offerInfo[_orderNumber].token;
         uint256 amount = offerInfo[_orderNumber].amount;
         uint256 sellFeeAmount = (amount * sellFeeList[token]) / FEE_DENOMINATOR;
+
+        // fee check
+        if (sellFeeAmount < minFeeAmountList[address(token)]) {
+            sellFeeAmount = minFeeAmountList[address(token)];
+            if (sellFeeAmount > amount) {
+                sellFeeAmount = amount;
+            }
+        }
+
         pendingFees[token] += sellFeeAmount;
 
         if (token == ETH) {
@@ -335,13 +372,13 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
             "NOT_CANCELED"
         );
 
+        // No Sell Fee because Cancel
         require(_amount <= offerInfo[_orderNumber].amount, "OVERFLOW_AMOUNT");
 
         address token = offerInfo[_orderNumber].token;
         address buyer = offerInfo[_orderNumber].buyer;
 
         buyerHistory[msg.sender][token] -= offerInfo[_orderNumber].amount;
-
         if (token == ETH) {
             payable(buyer).transfer(_amount);
         } else {
