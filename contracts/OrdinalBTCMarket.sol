@@ -86,6 +86,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         address _oBTC,
         address _admin
     ) public initializer {
+
+        __Ownable2Step_init();
+        __Pausable_init();
+        
         acceptedTokenList[ETH] = true;
         acceptedTokenList[_USDT] = true;
         acceptedTokenList[_USDC] = true;
