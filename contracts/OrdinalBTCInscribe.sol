@@ -15,7 +15,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
 
     struct InscribeInfo {
         address erc20Inscriber;
-        string btcInscriber;
+        string btcDestination;
         uint256 satsAmount;
         address token;
         uint256 tokenAmount;
@@ -44,6 +44,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     event LogUpdatePriceList(address indexed token, uint256 indexed price);
     event LogUpdateTokenList(address indexed token, bool indexed state);
     event LogUpdateAdminList(address indexed admin, bool indexed state);
+    event LogInscribe(address indexed sender, uint256 indexed number);
 
     function initialize(
         address _WBTC,
@@ -117,8 +118,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     }
 
     function inscribeWithETH(
-        address erc20Inscriber,
-        string calldata btcInscriber,
+        string calldata btcDestination,
         uint256 satsAmount,
         uint256 deadline
     ) external payable whenNotPaused {
@@ -136,8 +136,8 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         inscriberHistory[msg.sender][ETH] += ethAmount;
 
         inscribeInfo[number] = InscribeInfo({
-            erc20Inscriber: erc20Inscriber,
-            btcInscriber: btcInscriber,
+            erc20Inscriber: msg.sender,
+            btcDestination: btcDestination,
             satsAmount: satsAmount,
             token: ETH,
             tokenAmount: ethAmount,
@@ -149,11 +149,12 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         if (remainETH > 0) {
             payable(msg.sender).transfer(remainETH);
         }
+
+        emit LogInscribe(msg.sender, number);
     }
 
     function inscribe(
-        address erc20Inscriber,
-        string calldata btcInscriber,
+        string calldata btcDestination,
         uint256 satsAmount,
         address token,
         uint256 deadline
@@ -178,14 +179,16 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         inscriberHistory[msg.sender][token] += tokenAmount;
 
         inscribeInfo[number] = InscribeInfo({
-            erc20Inscriber: erc20Inscriber,
-            btcInscriber: btcInscriber,
+            erc20Inscriber: msg.sender,
+            btcDestination: btcDestination,
             satsAmount: satsAmount,
             token: token,
             tokenAmount: tokenAmount,
             inscriptionID: "",
             state: STATE.CREATED
         });
+
+        emit LogInscribe(msg.sender, number);
     }
 
     function inscribeCheck(
