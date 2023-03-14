@@ -38,7 +38,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     mapping(uint256 => InscribeInfo) public inscribeInfo; // number => inscribeInfo
 
     uint256 public number = 0; // latest inscribe number, current total numbers of inscribe
-    uint256 public checkedNumber = 0; // latest checked inscribe number, current total numbers of checked inscribe
 
     event LogSetFeeAmount(uint256 indexed feeAmount);
     event LogSetWBTC(address indexed WBTC);
@@ -199,15 +198,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
             "UNKNOWN_STATE"
         );
 
-        // Should be check previous order first
-        if (_number > 1) {
-            STATE prevState = inscribeInfo[_number - 1].state;
-            bool cond = (prevState == STATE.COMPLETED) ||
-                (prevState == STATE.CANCELED) ||
-                (prevState == STATE.WITHDRAW);
-            require(cond, "PREVIOUS_OFFER_WAS_NOT_CHECK_YET");
-        }
-
         require(
             inscribeInfo[_number].state == STATE.CREATED,
             "CANNOT_OFFER_CHECk"
@@ -217,8 +207,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         if (_state == STATE.COMPLETED) {
             inscribeInfo[_number].inscriptionID = _inscriptionID;
         }
-
-        checkedNumber = _number;
     }
 
     function withdrawCancelledInscribe(
