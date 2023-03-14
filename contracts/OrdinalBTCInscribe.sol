@@ -24,10 +24,10 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     }
 
     address public constant ETH = address(0xeee);
-    address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     uint256 public constant DENOMINATOR = 100_000 ether; // PRICE_DENOMINATOR is 23
 
     uint256 public feeAmount = 40_000; // 40000 sats
+    address public WBTC;
 
     mapping(address => uint256) public priceList;
     mapping(address => bool) public tokenList;
@@ -41,11 +41,13 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     uint256 public checkedNumber = 0; // latest checked inscribe number, current total numbers of checked inscribe
 
     event LogSetFeeAmount(uint256 indexed feeAmount);
+    event LogSetWBTC(address indexed WBTC);
     event LogUpdatePriceList(address indexed token, uint256 indexed price);
     event LogUpdateTokenList(address indexed token, bool indexed state);
     event LogUpdateAdminList(address indexed admin, bool indexed state);
 
     function initialize(
+        address _WBTC,
         address _USDT,
         address _USDC,
         address _oBTC,
@@ -53,6 +55,8 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     ) public initializer {
         __Ownable2Step_init();
         __Pausable_init();
+
+        WBTC = _WBTC;
 
         tokenList[ETH] = true;
         tokenList[WBTC] = true;
@@ -79,6 +83,12 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         require(feeAmount != _feeAmount, "SAME_FEE_AMOUNT");
         feeAmount = _feeAmount;
         emit LogSetFeeAmount(feeAmount);
+    }
+
+    function setWBTC(address _WBTC) external onlyOwner {
+        require(WBTC != _WBTC, "SAME_WBTC");
+        WBTC = _WBTC;
+        emit LogSetWBTC(_WBTC);
     }
 
     function updatePriceList(address token, uint256 price) external onlyOwner {

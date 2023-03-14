@@ -83,3 +83,19 @@ bc1p0u2dkf3llltq89kt3kewr4732z6avpxzsqdaaqrp0ac38ed7c9ssk74r25
 ## 3.15 Mainnet
 TransparentUpgradeableProxy(Proxy)
 0xBC6f4694ED22E7F8Fb9976000DabC9CB570d146b
+
+## 3.15 Goerli Testnet OrdinalBTCInscribe
+MockWBTC:(clone WBTC(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599) on etherscan)
+0x6f034EfD11f0b5b5322A5C8aB9e72547438a13c3
+decimals: 8
+
+```
+Implement- OrdinalBTCInscribe
+
+
+ProxyAdmin
+0x17E4830Fd09F9565c04A586cDD3029c19d61eC58
+
+TransparentUpgradeableProxy(Proxy)
+
+```
