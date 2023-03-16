@@ -26,7 +26,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     address public constant ETH = address(0xeee);
     uint256 public constant DENOMINATOR = 100_000 ether; // PRICE_DENOMINATOR is 23
 
-    uint256 public feeAmount = 40_000; // 40000 sats
     address public WBTC;
 
     mapping(address => uint256) public priceList;
@@ -39,7 +38,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
 
     uint256 public number = 0; // latest inscribe number, current total numbers of inscribe
 
-    event LogSetFeeAmount(uint256 indexed feeAmount);
     event LogSetWBTC(address indexed WBTC);
     event LogUpdatePriceList(address indexed token, uint256 indexed price);
     event LogUpdateTokenList(address indexed token, bool indexed state);
@@ -77,12 +75,6 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
     modifier onlyAdmins() {
         require(adminList[msg.sender] == true, "NOT_ADMIN");
         _;
-    }
-
-    function setFeeAmount(uint256 _feeAmount) external onlyOwner {
-        require(feeAmount != _feeAmount, "SAME_FEE_AMOUNT");
-        feeAmount = _feeAmount;
-        emit LogSetFeeAmount(feeAmount);
     }
 
     function setWBTC(address _WBTC) external onlyOwner {
@@ -127,9 +119,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
 
         uint256 ethAmount = (satsAmount * priceList[WBTC]) / priceList[ETH];
 
-        uint256 ethFeeAmount = (feeAmount * priceList[WBTC]) / priceList[ETH];
-
-        require(msg.value >= (ethAmount + ethFeeAmount), "INSUFFICIENT_AMOUNT");
+        require(msg.value >= ethAmount, "INSUFFICIENT_AMOUNT");
 
         number += 1;
 
@@ -145,7 +135,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
             state: STATE.CREATED
         });
 
-        uint256 remainETH = msg.value - (ethAmount + ethFeeAmount);
+        uint256 remainETH = msg.value - ethAmount;
         if (remainETH > 0) {
             payable(msg.sender).transfer(remainETH);
         }
@@ -164,14 +154,11 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
 
         uint256 tokenAmount = (satsAmount * priceList[WBTC]) / priceList[token];
 
-        uint256 tokenFeeAmount = (feeAmount * priceList[WBTC]) /
-            priceList[token];
-
         SafeERC20.safeTransferFrom(
             IERC20(token),
             msg.sender,
             address(this),
-            tokenAmount + tokenFeeAmount
+            tokenAmount
         );
 
         number += 1;
