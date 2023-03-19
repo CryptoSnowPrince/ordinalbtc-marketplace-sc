@@ -52,7 +52,6 @@ contract OrdinalBTCInscribe is Ownable2Step, Pausable {
     }
 
     address public constant ETH = address(0xeee);
-    uint256 public constant DENOMINATOR = 100_000 ether; // PRICE_DENOMINATOR is 23
 
     address public WETH;
     address public WBTC;
@@ -141,9 +140,9 @@ contract OrdinalBTCInscribe is Ownable2Step, Pausable {
         (uint256 numerator, uint256 denominator) = token == ETH
             ? (1, 1)
             : _getTokenPriceAsETH(token);
-        tokenAmount =
-            (satsAmount * numeratorBTC * denominator) /
-            (denominatorBTC * numerator);
+        uint256 priceBTC = (numeratorBTC * 10 ** 18) / denominatorBTC;
+        uint256 priceToken = (numerator * 10 ** 18) / denominator;
+        tokenAmount = (satsAmount * priceBTC) / priceToken;
     }
 
     modifier onlyAdmins() {
@@ -233,7 +232,7 @@ contract OrdinalBTCInscribe is Ownable2Step, Pausable {
         uint256 satsAmount,
         address token,
         uint256 deadline
-    ) external payable whenNotPaused {
+    ) external whenNotPaused {
         require(block.timestamp <= deadline, "OVER_TIME");
         require(tokenList[token], "NON_ACCEPTABLE_TOKEN");
 
