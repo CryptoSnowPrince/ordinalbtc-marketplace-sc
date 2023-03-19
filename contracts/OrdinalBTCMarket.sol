@@ -86,10 +86,9 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         address _oBTC,
         address _admin
     ) public initializer {
-
         __Ownable2Step_init();
         __Pausable_init();
-        
+
         acceptedTokenList[ETH] = true;
         acceptedTokenList[_USDT] = true;
         acceptedTokenList[_USDC] = true;
@@ -119,39 +118,39 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         _;
     }
 
-    function updateMinFeeAmountList(address token, uint256 _minFeeAmount)
-        external
-        onlyOwner
-    {
+    function updateMinFeeAmountList(
+        address token,
+        uint256 _minFeeAmount
+    ) external onlyOwner {
         require(minFeeAmountList[token] != _minFeeAmount, "SAME_MIN_FEE");
         minFeeAmountList[token] = _minFeeAmount;
         emit LogUpdateMinFeeAmountList(token, _minFeeAmount);
     }
 
-    function updateBuyFeeList(address token, uint256 _buyFee)
-        external
-        onlyOwner
-    {
+    function updateBuyFeeList(
+        address token,
+        uint256 _buyFee
+    ) external onlyOwner {
         require(_buyFee < MAX_FEE, "OVER_MAX_FEE");
         require(buyFeeList[token] != _buyFee, "SAME_FEE");
         buyFeeList[token] = _buyFee;
         emit LogUpdateBuyFeeList(token, _buyFee);
     }
 
-    function updateSellFeeList(address token, uint256 _sellFee)
-        external
-        onlyOwner
-    {
+    function updateSellFeeList(
+        address token,
+        uint256 _sellFee
+    ) external onlyOwner {
         require(_sellFee < MAX_FEE, "OVER_MAX_FEE");
         require(sellFeeList[token] != _sellFee, "SAME_FEE");
         sellFeeList[token] = _sellFee;
         emit LogUpdateSellFeeList(token, _sellFee);
     }
 
-    function updateAcceptedTokenList(address token, bool state)
-        external
-        onlyOwner
-    {
+    function updateAcceptedTokenList(
+        address token,
+        bool state
+    ) external onlyOwner {
         require(acceptedTokenList[token] != state, "SAME_STATE");
         acceptedTokenList[token] = state;
         emit LogUpdateAcceptedTokenList(token, state);
@@ -292,11 +291,10 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         );
     }
 
-    function offerCheck(uint256 _orderNumber, OSTATE _state)
-        external
-        whenNotPaused
-        onlyAdmins
-    {
+    function offerCheck(
+        uint256 _orderNumber,
+        OSTATE _state
+    ) external whenNotPaused onlyAdmins {
         require(
             (_state == OSTATE.ALLOWED) || (_state == OSTATE.CANCELED),
             "UNKNOWN_STATE"
@@ -328,12 +326,7 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
 
     function withdrawOrder(uint256 _orderNumber) external whenNotPaused {
         require(offerInfo[_orderNumber].seller == msg.sender, "NOT_SELLER");
-        uint256 btcNFTId = offerInfo[_orderNumber].btcNFTId;
-        require(
-            (offerState[btcNFTId] == OSTATE.ALLOWED) &&
-                (offerInfo[_orderNumber].state == OSTATE.ALLOWED),
-            "NOT_ALLOWED"
-        );
+        require(offerInfo[_orderNumber].state == OSTATE.ALLOWED, "NOT_ALLOWED");
 
         address token = offerInfo[_orderNumber].token;
         uint256 amount = offerInfo[_orderNumber].amount;
@@ -362,7 +355,6 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         sellerHistory[msg.sender][token] += amount;
 
         offerInfo[_orderNumber].state = OSTATE.COMPLETED;
-        offerState[btcNFTId] = OSTATE.COMPLETED;
 
         withdrawNumber += 1;
         withdrawHistory[withdrawNumber] = _orderNumber;
@@ -370,14 +362,12 @@ contract OrdinalBTCMarket is Ownable2StepUpgradeable, PausableUpgradeable {
         emit LogWithdrawOrder(_orderNumber);
     }
 
-    function withdrawCancelOrder(uint256 _orderNumber, uint256 _amount)
-        external
-        onlyOwner
-    {
-        uint256 btcNFTId = offerInfo[_orderNumber].btcNFTId;
+    function withdrawCancelOrder(
+        uint256 _orderNumber,
+        uint256 _amount
+    ) external onlyOwner {
         require(
-            (offerState[btcNFTId] == OSTATE.CANCELED) &&
-                (offerInfo[_orderNumber].state == OSTATE.CANCELED),
+            offerInfo[_orderNumber].state == OSTATE.CANCELED,
             "NOT_CANCELED"
         );
 
