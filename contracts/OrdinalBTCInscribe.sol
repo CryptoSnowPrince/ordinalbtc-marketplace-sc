@@ -196,7 +196,7 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
         _unpause();
     }
 
-    function inscribeWithWETH(
+    function inscribeWithETH(
         string calldata btcDestination,
         uint256 satsAmount,
         uint256 deadline
