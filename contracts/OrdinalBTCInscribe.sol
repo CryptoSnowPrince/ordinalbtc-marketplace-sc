@@ -123,8 +123,16 @@ contract OrdinalBTCInscribe is Ownable2StepUpgradeable, PausableUpgradeable {
                 (uint256 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
                     _priceInfo.poolWithWETH
                 ).slot0();
-                uint256 priceX96 = sqrtPriceX96 ** 2;
-                uint256 Q192 = 2 ** 192;
+
+                uint256 priceX96;
+                uint256 Q192;
+                if (sqrtPriceX96 > (2 ** 96 - 1)) {
+                    priceX96 = (sqrtPriceX96 >> 64) ** 2;
+                    Q192 = 2 ** 64;
+                } else {
+                    priceX96 = sqrtPriceX96 ** 2;
+                    Q192 = 2 ** 192;
+                }
 
                 (numerator, denominator) = WETH < token
                     ? (Q192, priceX96)
